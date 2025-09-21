@@ -1,1 +1,659 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق المصاريف</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-100 */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .input-field {
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        /* Custom scrollbar for webkit browsers */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+            border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* slate-300 */
+            border-radius: 10px;
+            border: 2px solid #f1f5f9;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8; /* slate-400 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6 flex items-center justify-center min-h-screen">
+    <div class="container mx-auto p-8 card w-full">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6">تطبيق المصاريف</h1>
 
+        <!-- قسم المصادقة -->
+        <div class="mb-6 text-center text-sm text-gray-600">
+            <p>معرف المستخدم: <span id="userIdDisplay" class="font-mono text-xs text-gray-500">جاري التحميل...</span></p>
+        </div>
+        
+        <div class="flex flex-col md:flex-row md:gap-8">
+            <!-- العمود الأول: الخلاصة والديون -->
+            <div class="flex-1 flex flex-col gap-8 mb-8 md:mb-0">
+                <!-- ملخص الحسابات -->
+                <div id="summarySection" class="p-6 bg-blue-50 rounded-2xl shadow-inner">
+                    <h2 class="text-2xl font-bold text-blue-800 mb-4 text-center">ملخص الحسابات</h2>
+                    <div class="grid grid-cols-1 gap-4 text-center">
+                        <div class="p-4 bg-red-100 rounded-xl shadow-sm">
+                            <p class="text-sm text-red-700">صافي الديون المعلقة</p>
+                            <p id="netPendingDebts" class="text-2xl font-bold text-red-800">0</p>
+                        </div>
+                        <div class="p-4 bg-red-100 rounded-xl shadow-sm">
+                            <p class="text-sm text-red-700">ديون البطاقة الغير مسددة</p>
+                            <p id="unpaidCardDebts" class="text-2xl font-bold text-red-800">0</p>
+                        </div>
+                        <div class="p-4 bg-blue-100 rounded-xl shadow-sm">
+                            <p class="text-sm text-blue-700">الرصيد الصافي</p>
+                            <p id="netBalanceDisplay" class="text-2xl font-bold text-blue-800">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الديون والأقساط -->
+                <div class="p-6 bg-gray-50 rounded-2xl">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">الديون والأقساط (نظام الأقساط)</h2>
+                    <div class="flex flex-col gap-4 mb-4">
+                        <input type="text" id="debtDescriptionInput" placeholder="وصف الدين (مثال: قسط سيارة)" class="input-field">
+                        <input type="number" id="debtPrincipalInput" placeholder="المبلغ الأصلي للدين" class="input-field">
+                        <input type="number" id="termInMonthsInput" placeholder="مدة التقسيط بالأشهر" class="input-field">
+                        <input type="date" id="debtStartDateInput" class="input-field">
+                        <div class="flex gap-4 items-center">
+                            <label class="flex items-center gap-2 text-gray-700">
+                                <input type="radio" name="debtPaymentMethod" value="نقدا" checked class="text-gray-700">
+                                <span>نقدا</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-gray-700">
+                                <input type="radio" name="debtPaymentMethod" value="عن طريق البطاقة" class="text-gray-700">
+                                <span>عن طريق البطاقة</span>
+                            </label>
+                        </div>
+                        <button id="addDebtButton"
+                            class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                            أضف دين
+                        </button>
+                    </div>
+                    <div class="h-48 overflow-y-auto">
+                        <ul id="debtsList" class="flex flex-col gap-3">
+                            <!-- الديون ستظهر هنا -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- العمود الثاني: المعاملات -->
+            <div class="flex-1 flex flex-col gap-8">
+                <!-- قسم تصفح الأشهر -->
+                <div class="p-6 bg-gray-50 rounded-2xl">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">تصفح المعاملات حسب الشهر</h2>
+                    <select id="monthSelect" class="w-full input-field focus:ring-blue-500">
+                        <option value="all">كل المعاملات</option>
+                    </select>
+                </div>
+
+                <!-- قسم إضافة المعاملات -->
+                <div class="p-6 bg-gray-50 rounded-2xl">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">إضافة معاملة جديدة</h2>
+                    <div class="flex flex-col gap-4">
+                        <input type="text" id="descriptionInput" placeholder="وصف المعاملة" class="input-field">
+                        <input type="number" id="amountInput" placeholder="المبلغ" class="input-field">
+                        <input type="date" id="transactionDateInput" class="input-field">
+                        <div class="flex gap-4 items-center">
+                            <label class="flex items-center gap-2 text-gray-700">
+                                <input type="radio" name="transactionType" value="expense" checked class="text-red-500">
+                                <span>مصروف</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-gray-700">
+                                <input type="radio" name="transactionType" value="income" class="text-green-500">
+                                <span>دخل</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-gray-700">
+                                <input type="radio" name="transactionType" value="debt" class="text-blue-500">
+                                <span>دين</span>
+                            </label>
+                        </div>
+                        <button id="addButton"
+                            class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                            أضف
+                        </button>
+                    </div>
+                </div>
+
+                <!-- قسم عرض المصاريف -->
+                <div class="p-6 bg-gray-50 rounded-2xl">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">قائمة المعاملات</h2>
+                    <div class="h-64 overflow-y-auto">
+                        <ul id="transactionsList" class="flex flex-col gap-3">
+                            <!-- المعاملات ستظهر هنا -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- قسم الديون المعلقة -->
+                <div class="p-6 bg-gray-50 rounded-2xl">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">الديون المعلقة</h2>
+                    <div class="h-48 overflow-y-auto">
+                        <ul id="pendingDebtsList" class="flex flex-col gap-3">
+                            <!-- الديون المعلقة ستظهر هنا -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, Timestamp, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        // Enable Firebase debug logging
+        setLogLevel('debug');
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let transactions = []; // Array to hold transactions locally
+        let debts = []; // Array to hold debts locally
+        let pendingDebts = []; // Array for pending debts
+
+        // DOM elements for transactions
+        const descriptionInput = document.getElementById('descriptionInput');
+        const amountInput = document.getElementById('amountInput');
+        const transactionDateInput = document.getElementById('transactionDateInput');
+        const addButton = document.getElementById('addButton');
+        const transactionsList = document.getElementById('transactionsList');
+        const netBalanceDisplay = document.getElementById('netBalanceDisplay');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const pendingDebtsList = document.getElementById('pendingDebtsList');
+
+        // DOM elements for installment debts
+        const debtDescriptionInput = document.getElementById('debtDescriptionInput');
+        const debtPrincipalInput = document.getElementById('debtPrincipalInput');
+        const termInMonthsInput = document.getElementById('termInMonthsInput');
+        const debtStartDateInput = document.getElementById('debtStartDateInput');
+        const addDebtButton = document.getElementById('addDebtButton');
+        const debtsList = document.getElementById('debtsList');
+        
+        // DOM elements for summary
+        const netPendingDebtsDisplay = document.getElementById('netPendingDebts');
+        const unpaidCardDebtsDisplay = document.getElementById('unpaidCardDebts');
+        
+        // DOM element for month filter
+        const monthSelect = document.getElementById('monthSelect');
+        const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+        // Asynchronous function to handle authentication and data fetching
+        async function initializeAppAndAuth() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                console.log("Authentication successful.");
+                
+                const userId = auth.currentUser?.uid || crypto.randomUUID();
+                userIdDisplay.textContent = userId;
+
+                // Firestore collection reference for transactions
+                const transactionsCollection = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
+                const qTransactions = query(transactionsCollection, orderBy("timestamp", "desc"));
+                onSnapshot(qTransactions, (snapshot) => {
+                    transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    populateMonthFilter();
+                    updateTransactionsUI();
+                });
+
+                // Firestore collection reference for installment debts
+                const debtsCollection = collection(db, `artifacts/${appId}/users/${userId}/debts`);
+                onSnapshot(debtsCollection, (snapshot) => {
+                    debts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateDebtsUI();
+                });
+
+                // Firestore collection reference for pending debts
+                const pendingDebtsCollection = collection(db, `artifacts/${appId}/users/${userId}/pending_debts`);
+                onSnapshot(pendingDebtsCollection, (snapshot) => {
+                    pendingDebts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updatePendingDebtsUI();
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+            }
+        }
+
+        // Function to format the date
+        function formatDate(timestamp) {
+            const date = timestamp && timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', calendar: 'gregory' });
+        }
+
+        // Function to update the transactions UI and the net balance display
+        function updateTransactionsUI(transactionsToDisplay = transactions) {
+            transactionsList.innerHTML = '';
+            let total = 0;
+
+            if (transactionsToDisplay.length === 0) {
+                const noDataMessage = document.createElement('li');
+                noDataMessage.className = 'text-center text-gray-500 py-4';
+                noDataMessage.textContent = 'لا توجد معاملات مدخلة.';
+                transactionsList.appendChild(noDataMessage);
+            } else {
+                transactionsToDisplay.forEach(transaction => {
+                    const isExpense = transaction.type === 'expense';
+                    const listItem = document.createElement('li');
+                    listItem.className = 'flex justify-between items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow';
+                    // Add the document ID as a data attribute for easy deletion
+                    listItem.dataset.id = transaction.id;
+                    const amountColor = isExpense ? 'text-red-600' : 'text-green-600';
+                    const sign = isExpense ? '-' : '+';
+                    
+                    listItem.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="text-gray-800 font-medium">${transaction.description}</span>
+                            <span class="text-gray-500 text-xs mt-1">${formatDate(transaction.timestamp)}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-lg ${amountColor}">${sign}${transaction.amount}</span>
+                            <button class="delete-transaction-btn bg-red-500 text-white text-xs p-2 rounded-lg hover:bg-red-600 transition duration-300">حذف</button>
+                        </div>
+                    `;
+                    transactionsList.appendChild(listItem);
+                    total += isExpense ? -transaction.amount : transaction.amount;
+                });
+            }
+            netBalanceDisplay.textContent = total.toFixed(2);
+        }
+
+        // Function to update the debts UI (for installments)
+        function updateDebtsUI() {
+            debtsList.innerHTML = '';
+            let unpaidCardTotal = 0;
+            
+            if (debts.length === 0) {
+                const noDataMessage = document.createElement('li');
+                noDataMessage.className = 'text-center text-gray-500 py-4';
+                noDataMessage.textContent = 'لا توجد ديون مدخلة.';
+                debtsList.appendChild(noDataMessage);
+            } else {
+                debts.forEach(debt => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'flex justify-between items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow';
+                    
+                    const isFullyPaid = debt.remainingBalance <= 0;
+                    let statusText;
+                    let statusClass = isFullyPaid ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                    
+                    if (debt.paymentMethod === 'نقدا') {
+                        statusText = isFullyPaid ? 'تم السداد' : `المتبقي: ${debt.remainingBalance.toFixed(2)}`;
+                    } else {
+                        const remainingInstallments = Math.ceil(debt.remainingBalance / debt.monthlyInstallment);
+                        statusText = isFullyPaid ? 'تم السداد' : `المتبقي: ${remainingInstallments} قسط`;
+                        unpaidCardTotal += debt.remainingBalance;
+                    }
+
+                    const debtDetails = debt.paymentMethod === 'نقدا'
+                        ? `<span class="text-gray-500 text-sm">دفعة نقدية بالكامل</span>`
+                        : `<span class="text-gray-500 text-xs mt-1">الأصل: ${debt.principal} | العمولة السنوية: 4% | المدة: ${debt.termInMonths} أشهر</span>
+                           <span class="text-gray-500 text-xs mt-1">الإجمالي مع العمولة: ${debt.totalWithInterest.toFixed(2)} | القسط الشهري: ${debt.monthlyInstallment.toFixed(2)}</span>`;
+
+                    listItem.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="text-gray-800 font-medium">${debt.description}</span>
+                            ${debtDetails}
+                            <span class="text-gray-500 text-xs mt-1">طريقة الدفع: ${debt.paymentMethod}</span>
+                            <span class="${statusClass} text-sm mt-2">${statusText}</span>
+                        </div>
+                    `;
+                    debtsList.appendChild(listItem);
+                });
+            }
+            unpaidCardDebtsDisplay.textContent = unpaidCardTotal.toFixed(2);
+        }
+        
+        // Function to update the UI for pending debts
+        function updatePendingDebtsUI() {
+            pendingDebtsList.innerHTML = '';
+            let pendingDebtsTotal = 0;
+
+            if (pendingDebts.length === 0) {
+                const noDataMessage = document.createElement('li');
+                noDataMessage.className = 'text-center text-gray-500 py-4';
+                noDataMessage.textContent = 'لا توجد ديون معلقة.';
+                pendingDebtsList.appendChild(noDataMessage);
+            } else {
+                pendingDebts.forEach(debt => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'flex justify-between items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow';
+                    pendingDebtsTotal += debt.amount;
+                    
+                    listItem.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="text-gray-800 font-medium">${debt.description}</span>
+                            <span class="text-gray-500 text-xs mt-1">${formatDate(debt.timestamp)}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-lg text-red-600">${debt.amount}</span>
+                            <button class="pay-pending-debt-btn bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition duration-300">سداد</button>
+                        </div>
+                    `;
+                    pendingDebtsList.appendChild(listItem);
+                });
+            }
+            netPendingDebtsDisplay.textContent = pendingDebtsTotal.toFixed(2);
+        }
+        
+        // Event listener for paying a pending debt
+        pendingDebtsList.addEventListener('click', async (e) => {
+            const payBtn = e.target.closest('.pay-pending-debt-btn');
+            if (payBtn) {
+                const listItem = payBtn.closest('li');
+                const debtIndex = Array.from(pendingDebtsList.children).indexOf(listItem);
+                const debt = pendingDebts[debtIndex];
+                
+                if (debt) {
+                    const debtId = debt.id;
+                    const debtAmount = debt.amount;
+                    const debtDescription = debt.description;
+                    
+                    try {
+                        const userId = auth.currentUser?.uid;
+                        const transactionsCollection = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
+                        const pendingDebtDocRef = doc(db, `artifacts/${appId}/users/${userId}/pending_debts/${debtId}`);
+
+                        // Add a new expense transaction to record the payment
+                        await addDoc(transactionsCollection, {
+                            description: `سداد دين معلق: ${debtDescription}`,
+                            amount: debtAmount,
+                            type: 'expense',
+                            timestamp: Timestamp.now()
+                        });
+
+                        // Delete the debt from the pending_debts collection
+                        await deleteDoc(pendingDebtDocRef);
+                        
+                        console.log("Pending debt paid and deleted successfully.");
+                    } catch (error) {
+                        console.error("Error paying pending debt:", error);
+                    }
+                }
+            }
+        });
+
+
+        // Function to populate the month filter dropdown
+        function populateMonthFilter() {
+            monthSelect.innerHTML = '<option value="all">كل المعاملات</option>';
+            const uniqueMonths = new Set();
+            transactions.forEach(t => {
+                const date = t.timestamp && typeof t.timestamp.toDate === 'function' ? t.timestamp.toDate() : new Date(t.timestamp);
+                const month = date.getMonth();
+                const year = date.getFullYear();
+                uniqueMonths.add(`${year}-${month}`);
+            });
+
+            // Sort months from newest to oldest
+            const sortedMonths = Array.from(uniqueMonths).sort((a, b) => {
+                const [yearA, monthA] = a.split('-').map(Number);
+                const [yearB, monthB] = b.split('-').map(Number);
+                if (yearA !== yearB) return yearB - yearA;
+                return monthB - monthA;
+            });
+            sortedMonths.forEach(monthYear => {
+                const [year, month] = monthYear.split('-');
+                const option = document.createElement('option');
+                option.value = monthYear;
+                option.textContent = `${monthNames[parseInt(month)]} ${year}`;
+                monthSelect.appendChild(option);
+            });
+        }
+
+        // Event listener for month filter change
+        monthSelect.addEventListener('change', () => {
+            const selectedMonth = monthSelect.value;
+            if (selectedMonth === 'all') {
+                updateTransactionsUI(transactions);
+            } else {
+                const [year, month] = selectedMonth.split('-');
+                const filteredTransactions = transactions.filter(t => {
+                    const date = t.timestamp && t.timestamp.toDate ? t.timestamp.toDate() : new Date(t.timestamp);
+                    return date.getFullYear() === parseInt(year) && date.getMonth() === parseInt(month);
+                });
+                updateTransactionsUI(filteredTransactions);
+            }
+        });
+
+        // Add transaction to Firestore
+        addButton.addEventListener('click', async () => {
+            const description = descriptionInput.value.trim();
+            let amount = parseFloat(amountInput.value);
+            const type = document.querySelector('input[name="transactionType"]:checked').value;
+            const dateValue = transactionDateInput.value;
+            const timestamp = dateValue ? Timestamp.fromDate(new Date(dateValue)) : Timestamp.now();
+
+            if (description && !isNaN(amount) && amount > 0) {
+                try {
+                    const userId = auth.currentUser?.uid;
+                    const transactionsCollection = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
+                    const debtsCollection = collection(db, `artifacts/${appId}/users/${userId}/debts`);
+                    const pendingDebtsCollection = collection(db, `artifacts/${appId}/users/${userId}/pending_debts`);
+
+                    if (type === 'debt') {
+                        await addDoc(pendingDebtsCollection, {
+                            description: description,
+                            amount: amount,
+                            timestamp: timestamp
+                        });
+                        console.log("Debt added successfully to pending_debts collection.");
+                    } else {
+                        // Add the main transaction first
+                        await addDoc(transactionsCollection, {
+                            description: description,
+                            amount: amount,
+                            type: type,
+                            timestamp: timestamp
+                        });
+                        console.log("Transaction added successfully to Firestore.");
+
+                        // If it's an income, process ALL automatic payments
+                        if (type === 'income') {
+                            const incomeDate = dateValue ? new Date(dateValue) : new Date();
+                            const snapshotDebts = await getDocs(debtsCollection);
+                            
+                            // Handle installment debts (Card and Cash)
+                            for (const debtDoc of snapshotDebts.docs) {
+                                const debtData = debtDoc.data();
+                                
+                                // Process Card debts automatically
+                                if (debtData.paymentMethod === 'عن طريق البطاقة' && debtData.remainingBalance > 0) {
+                                    const lastPaidDate = debtData.lastPaidDate?.toDate() || debtData.timestamp.toDate();
+                                    
+                                    const lastPaidYear = lastPaidDate.getFullYear();
+                                    const lastPaidMonth = lastPaidDate.getMonth();
+                                    const incomeYear = incomeDate.getFullYear();
+                                    const incomeMonth = incomeDate.getMonth();
+                                    
+                                    let monthsToPay = (incomeYear - lastPaidYear) * 12 + (incomeMonth - lastPaidMonth);
+                                    if (incomeDate.getDate() < lastPaidDate.getDate() && monthsToPay > 0) {
+                                        monthsToPay--;
+                                    }
+
+                                    if (monthsToPay > 0) {
+                                        const totalDeduction = monthsToPay * debtData.monthlyInstallment;
+                                        const newRemainingBalance = Math.max(0, debtData.remainingBalance - totalDeduction);
+                                        
+                                        await updateDoc(debtDoc.ref, {
+                                            remainingBalance: newRemainingBalance,
+                                            lastPaidDate: Timestamp.fromDate(incomeDate)
+                                        });
+
+                                        await addDoc(transactionsCollection, {
+                                            description: `سداد ${monthsToPay} قسط متأخر لـ ${debtData.description}`,
+                                            amount: totalDeduction,
+                                            type: 'expense',
+                                            timestamp: Timestamp.now()
+                                        });
+                                        console.log(`Paid ${monthsToPay} installments for card debt.`);
+                                    }
+                                }
+                                
+                                // NEW: Process Cash debts automatically
+                                if (debtData.paymentMethod === 'نقدا' && debtData.remainingBalance > 0) {
+                                    const remaining = debtData.remainingBalance;
+                                    const newRemainingBalance = Math.max(0, remaining - amount);
+                                    const amountPaid = remaining - newRemainingBalance;
+
+                                    if (amountPaid > 0) {
+                                        await updateDoc(debtDoc.ref, {
+                                            remainingBalance: newRemainingBalance,
+                                        });
+
+                                        await addDoc(transactionsCollection, {
+                                            description: `سداد دين نقدي: ${debtData.description}`,
+                                            amount: amountPaid,
+                                            type: 'expense',
+                                            timestamp: Timestamp.now()
+                                        });
+                                        console.log(`Paid ${amountPaid} of cash debt.`);
+                                        // Reduce the income amount to reflect the payment
+                                        amount -= amountPaid;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    descriptionInput.value = '';
+                    amountInput.value = '';
+                    transactionDateInput.value = '';
+                } catch (e) {
+                    console.error("Error adding transaction: ", e);
+                }
+            }
+        });
+
+        // Add a new installment debt to Firestore
+        addDebtButton.addEventListener('click', async () => {
+            const description = debtDescriptionInput.value.trim();
+            const principal = parseFloat(debtPrincipalInput.value);
+            const termInMonths = parseFloat(termInMonthsInput.value);
+            const startDateValue = debtStartDateInput.value;
+            const timestamp = startDateValue ? Timestamp.fromDate(new Date(startDateValue)) : Timestamp.now();
+            const paymentMethod = document.querySelector('input[name="debtPaymentMethod"]:checked').value;
+
+            if (description && !isNaN(principal) && principal > 0) {
+                try {
+                    const userId = auth.currentUser?.uid;
+                    const debtsCollection = collection(db, `artifacts/${appId}/users/${userId}/debts`);
+
+                    if (paymentMethod === 'نقدا') {
+                        await addDoc(debtsCollection, {
+                            description: description,
+                            principal: principal,
+                            annualInterestRate: 0,
+                            termInMonths: 0,
+                            totalWithInterest: principal,
+                            monthlyInstallment: 0,
+                            remainingBalance: principal,
+                            timestamp: Timestamp.now(),
+                            paymentMethod: 'نقدا'
+                        });
+                        console.log("Cash debt recorded as pending.");
+
+                    } else { // عن طريق البطاقة
+                        if (!isNaN(termInMonths) && termInMonths > 0) {
+                            const annualInterestRate = 4;
+                            const totalInterest = (principal * annualInterestRate * (termInMonths / 12)) / 100;
+                            const totalWithInterest = principal + totalInterest;
+                            const monthlyInstallment = totalWithInterest / termInMonths;
+    
+                            await addDoc(debtsCollection, {
+                                description: description,
+                                principal: principal,
+                                annualInterestRate: annualInterestRate,
+                                termInMonths: termInMonths,
+                                totalWithInterest: totalWithInterest,
+                                monthlyInstallment: monthlyInstallment,
+                                remainingBalance: totalWithInterest,
+                                timestamp: timestamp,
+                                lastPaidDate: timestamp,
+                                paymentMethod: paymentMethod
+                            });
+                            console.log("Card debt recorded as installment.");
+                        } else {
+                           console.error("يجب إدخال مدة التقسيط للأقساط التي تدفع بالبطاقة.");
+                           return;
+                        }
+                    }
+
+                    debtDescriptionInput.value = '';
+                    debtPrincipalInput.value = '';
+                    termInMonthsInput.value = '';
+                    debtStartDateInput.value = '';
+                } catch (e) {
+                    console.error("Error in debt operation: ", e);
+                }
+            }
+        });
+
+        // Event listener for deleting a transaction
+        transactionsList.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-transaction-btn');
+            if (deleteBtn) {
+                const listItem = deleteBtn.closest('li');
+                const transactionId = listItem.dataset.id;
+                
+                try {
+                    const userId = auth.currentUser?.uid;
+                    const transactionDocRef = doc(db, `artifacts/${appId}/users/${userId}/transactions/${transactionId}`);
+                    await deleteDoc(transactionDocRef);
+                    console.log("Transaction deleted successfully.");
+                } catch (error) {
+                    console.error("Error deleting transaction:", error);
+                }
+            }
+        });
+        
+        // Initial application setup
+        initializeAppAndAuth();
+    </script>
+</body>
+</html>
